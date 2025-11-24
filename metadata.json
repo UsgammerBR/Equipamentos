@@ -1,0 +1,7 @@
+{
+  "name": "Copy of EquipTrack Pro",
+  "description": "Professional equipment tracking application with daily logging, QR scanning, and photo documentation.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
