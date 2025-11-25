@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, PropsWithChildren } from 'react';
 import { Html5QrcodeScanner, Html5QrcodeScanType } from "html5-qrcode";
 import { 
     IconX, IconChevronLeft, IconChevronRight, IconFileWord, 
-    IconFileExcel, IconWhatsapp, IconTelegram, IconEmail, IconShare, IconTrash, IconApp, IconCamera, IconQrCode, IconGallery
+    IconFileExcel, IconWhatsapp, IconTelegram, IconEmail, IconShare, IconTrash, IconCamera, IconQrCode, IconGallery, IconApp
 } from './icons';
 import { AppData, DailyData, EquipmentCategory, EquipmentItem } from '../types';
 import { CATEGORIES } from '../constants';
@@ -177,10 +177,12 @@ export const DownloadModal = ({ appData, currentDate, onClose }: any) => {
             link.download = `Equipamentos_${label.replace(/[^a-z0-9]/gi, '_')}.${extension}`;
             document.body.appendChild(link);
             link.click();
+            
+            // Increased timeout for mobile browsers
             setTimeout(() => {
                 document.body.removeChild(link);
                 URL.revokeObjectURL(url);
-            }, 100);
+            }, 1000);
         } catch (e) {
             console.error(e);
             alert("Erro ao exportar arquivo. Tente novamente.");
