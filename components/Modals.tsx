@@ -7,11 +7,14 @@ import {
 import { AppData, DailyData, EquipmentCategory, EquipmentItem } from '../types';
 import { CATEGORIES } from '../constants';
 
-// Helper types and functions
+// --- HELPER FUNCTIONS ---
+
 const getFormattedDate = (date: Date): string => date.toISOString().split('T')[0];
+
 const isItemActive = (item: EquipmentItem): boolean => {
     return (item.contract && item.contract.trim() !== '') || (item.serial && item.serial.trim() !== '') || item.photos.length > 0;
 };
+
 const createEmptyDailyData = (): DailyData => {
   const data = CATEGORIES.reduce((acc, category) => {
     acc[category] = [];
@@ -54,6 +57,8 @@ const getDataInRange = (appData: AppData, currentDate: Date, scope: 'day' | 'mon
     }
 };
 
+// --- GENERIC MODAL COMPONENT ---
+
 interface ModalProps {
     title: string;
     onClose: () => void;
@@ -71,7 +76,15 @@ export const Modal: React.FC<PropsWithChildren<ModalProps>> = ({ title, onClose,
     </div>
 );
 
-export const CalendarModal = ({ currentDate, onClose, onDateSelect }: any) => {
+// --- SPECIFIC MODALS ---
+
+interface CalendarModalProps {
+    currentDate: Date;
+    onClose: () => void;
+    onDateSelect: (date: Date) => void;
+}
+
+export const CalendarModal: React.FC<CalendarModalProps> = ({ currentDate, onClose, onDateSelect }) => {
     const [viewDate, setViewDate] = useState(currentDate);
     const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
     const firstDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
@@ -107,7 +120,13 @@ export const CalendarModal = ({ currentDate, onClose, onDateSelect }: any) => {
     );
 };
 
-export const DownloadModal = ({ appData, currentDate, onClose }: any) => {
+interface DownloadModalProps {
+    appData: AppData;
+    currentDate: Date;
+    onClose: () => void;
+}
+
+export const DownloadModal: React.FC<DownloadModalProps> = ({ appData, currentDate, onClose }) => {
     const [range, setRange] = useState<'day' | 'month'>('day');
 
     const handleDownload = (format: 'word' | 'excel') => {
@@ -117,7 +136,6 @@ export const DownloadModal = ({ appData, currentDate, onClose }: any) => {
             let mimeType = '';
             let extension = '';
 
-            // Common styles for both formats to ensure table borders
             const styles = `
                 <style>
                     body { font-family: Arial, sans-serif; }
@@ -169,7 +187,6 @@ export const DownloadModal = ({ appData, currentDate, onClose }: any) => {
                 `;
             }
 
-            // Create blob with UTF-8 BOM
             const blob = new Blob(['\ufeff', content], { type: mimeType });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
@@ -178,7 +195,6 @@ export const DownloadModal = ({ appData, currentDate, onClose }: any) => {
             document.body.appendChild(link);
             link.click();
             
-            // Increased timeout for mobile browsers
             setTimeout(() => {
                 document.body.removeChild(link);
                 URL.revokeObjectURL(url);
@@ -212,7 +228,14 @@ export const DownloadModal = ({ appData, currentDate, onClose }: any) => {
     );
 };
 
-export const ShareModal = ({ appData, currentDate, onClose, isSharingApp }: any) => {
+interface ShareModalProps {
+    appData: AppData;
+    currentDate: Date;
+    onClose: () => void;
+    isSharingApp?: boolean;
+}
+
+export const ShareModal: React.FC<ShareModalProps> = ({ appData, currentDate, onClose, isSharingApp }) => {
     const [range, setRange] = useState<'day' | 'month' | 'specific'>('day');
     const [specificDate, setSpecificDate] = useState<Date | null>(null);
 
@@ -289,7 +312,12 @@ export const ShareModal = ({ appData, currentDate, onClose, isSharingApp }: any)
     );
 };
 
-export const AboutModal = ({ onClose, onShareClick }: any) => (
+interface AboutModalProps {
+    onClose: () => void;
+    onShareClick: () => void;
+}
+
+export const AboutModal: React.FC<AboutModalProps> = ({ onClose, onShareClick }) => (
     <Modal title="Sobre" onClose={onClose}>
         <div className="text-center space-y-4">
             <IconApp className="w-24 h-24 mx-auto drop-shadow-xl" />
@@ -307,7 +335,12 @@ export const AboutModal = ({ onClose, onShareClick }: any) => (
     </Modal>
 );
 
-export const SettingsModal = ({ onClose, onClearData }: any) => (
+interface SettingsModalProps {
+    onClose: () => void;
+    onClearData: () => void;
+}
+
+export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onClearData }) => (
     <Modal title="Configurações" onClose={onClose}>
         <div className="space-y-4">
             <div className="p-4 bg-red-50 rounded-xl border border-red-100">
@@ -321,7 +354,13 @@ export const SettingsModal = ({ onClose, onClearData }: any) => (
     </Modal>
 );
 
-export const ConfirmationModal = ({ message, onConfirm, onCancel }: any) => (
+interface ConfirmationModalProps {
+    message: string;
+    onConfirm: () => void;
+    onCancel: () => void;
+}
+
+export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ message, onConfirm, onCancel }) => (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
         <div className="bg-white/90 backdrop-blur-xl p-6 rounded-2xl shadow-2xl max-w-xs w-full text-center border border-white/50 animate-slide-in-up">
             <IconTrash className="w-12 h-12 text-red-500 mx-auto mb-3 bg-red-50 p-2 rounded-full" />
@@ -334,7 +373,14 @@ export const ConfirmationModal = ({ message, onConfirm, onCancel }: any) => (
     </div>
 );
 
-export const PhotoGalleryModal = ({ item, onClose, onUpdatePhotos, setConfirmation }: any) => {
+interface PhotoGalleryModalProps {
+    item: EquipmentItem;
+    onClose: () => void;
+    onUpdatePhotos: (photos: string[]) => void;
+    setConfirmation: (val: any) => void;
+}
+
+export const PhotoGalleryModal: React.FC<PhotoGalleryModalProps> = ({ item, onClose, onUpdatePhotos, setConfirmation }) => {
     const [viewPhoto, setViewPhoto] = useState<string | null>(null);
     
     const handleDelete = (index: number) => {
@@ -393,7 +439,12 @@ export const PhotoGalleryModal = ({ item, onClose, onUpdatePhotos, setConfirmati
     );
 };
 
-export const CameraModal = ({ onClose, onCapture }: any) => {
+interface CameraModalProps {
+    onClose: () => void;
+    onCapture: (photo: string | null, code: string | null) => void;
+}
+
+export const CameraModal: React.FC<CameraModalProps> = ({ onClose, onCapture }) => {
     const [mode, setMode] = useState<'select' | 'photo' | 'qr'>('select');
     const [isCameraReady, setIsCameraReady] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -605,7 +656,13 @@ export const CameraModal = ({ onClose, onCapture }: any) => {
     );
 };
 
-export const SearchModal = ({ onClose, appData, onSelect }: any) => {
+interface SearchModalProps {
+    onClose: () => void;
+    appData: AppData;
+    onSelect: (item: any) => void;
+}
+
+export const SearchModal: React.FC<SearchModalProps> = ({ onClose, appData, onSelect }) => {
     const [term, setTerm] = useState('');
     const [results, setResults] = useState<any[]>([]);
 
