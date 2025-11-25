@@ -25,8 +25,10 @@ export const SummaryFooter: React.FC<SummaryFooterProps> = ({ data, allData, cur
         const curr = new Date(currentDate + 'T00:00:00'); 
         const year = curr.getFullYear();
         const month = curr.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate(); // Get exact number of days
+        
         let sum = 0;
-        for (let d = 1; d <= 31; d++) {
+        for (let d = 1; d <= daysInMonth; d++) {
              const dayStr = d.toString().padStart(2, '0');
              const monthStr = (month + 1).toString().padStart(2, '0');
              const dateKey = `${year}-${monthStr}-${dayStr}`;

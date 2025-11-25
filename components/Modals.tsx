@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, PropsWithChildren } from 'react';
 import { Html5QrcodeScanner, Html5QrcodeScanType } from "html5-qrcode";
 import { 
     IconX, IconChevronLeft, IconChevronRight, IconFileWord, 
-    IconFileExcel, IconWhatsapp, IconTelegram, IconEmail, IconShare, IconTrash, IconApp, IconCamera, IconQrCode, IconCalendar
+    IconFileExcel, IconWhatsapp, IconTelegram, IconEmail, IconShare, IconTrash, IconApp, IconCamera, IconQrCode, IconGallery
 } from './icons';
 import { AppData, DailyData, EquipmentCategory, EquipmentItem } from '../types';
 import { CATEGORIES } from '../constants';
@@ -36,6 +36,8 @@ const getDataInRange = (appData: AppData, currentDate: Date, scope: 'day' | 'mon
         const month = currentDate.getMonth();
         const currentDay = currentDate.getDate();
         const aggregatedData = createEmptyDailyData();
+        
+        // Loop from day 1 to current day of the month
         for (let d = 1; d <= currentDay; d++) {
             const loopDate = new Date(year, month, d);
             const loopFmt = getFormattedDate(loopDate);
@@ -109,57 +111,80 @@ export const DownloadModal = ({ appData, currentDate, onClose }: any) => {
     const [range, setRange] = useState<'day' | 'month'>('day');
 
     const handleDownload = (format: 'word' | 'excel') => {
-        const { data, label } = getDataInRange(appData, currentDate, range, undefined);
-        let content = '';
-        let mimeType = '';
-        let extension = '';
+        try {
+            const { data, label } = getDataInRange(appData, currentDate, range, undefined);
+            let content = '';
+            let mimeType = '';
+            let extension = '';
 
-        if (format === 'word') {
-            mimeType = 'application/msword';
-            extension = 'doc';
-            content = `
-                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-                <head><meta charset='utf-8'><title>Relatório</title></head><body>
-                <h1 style="text-align:center; color:#333;">Relatório de Equipamentos - ${label}</h1>
-                ${CATEGORIES.map(cat => {
-                    const items = data[cat] || [];
-                    if (items.length === 0) return '';
-                    return `
-                        <h2 style="background:#eee; padding:5px; border-left: 5px solid #0ea5e9;">${cat}</h2>
-                        <table border="1" style="width:100%; border-collapse:collapse;">
-                            <tr style="background:#f9f9f9;"><th>Contrato</th><th>Serial</th></tr>
-                            ${items.map((item: any) => `<tr><td align="center">${item.contract}</td><td align="center">${item.serial}</td></tr>`).join('')}
-                        </table>
-                    `;
-                }).join('')}
-                <br/><p>Gerado por EquipTrack Pro</p></body></html>
+            // Common styles for both formats to ensure table borders
+            const styles = `
+                <style>
+                    body { font-family: Arial, sans-serif; }
+                    table { border-collapse: collapse; width: 100%; }
+                    th, td { border: 1px solid black; padding: 8px; text-align: left; }
+                    th { background-color: #f2f2f2; }
+                    .category-header { background-color: #e0f2fe; font-weight: bold; margin-top: 20px; padding: 10px; }
+                </style>
             `;
-        } else {
-            mimeType = 'application/vnd.ms-excel';
-            extension = 'xls';
-            content = `
-                <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-                <head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head><body>
-                <table>
-                    <thead><tr><th colspan="3" style="font-size:16px; font-weight:bold;">Relatório - ${label}</th></tr>
-                    <tr><th>Categoria</th><th>Contrato</th><th>Serial</th></tr></thead>
-                    <tbody>
-                    ${CATEGORIES.flatMap(cat => (data[cat]||[]).map((item: any) => 
-                        `<tr><td>${cat}</td><td>${item.contract}</td><td>${item.serial}</td></tr>`
-                    )).join('')}
-                    </tbody>
-                </table></body></html>
-            `;
+
+            if (format === 'word') {
+                mimeType = 'application/msword';
+                extension = 'doc';
+                content = `
+                    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                    <head><meta charset='utf-8'><title>Relatório</title>${styles}</head><body>
+                    <h1 style="text-align:center;">Relatório de Equipamentos - ${label}</h1>
+                    ${CATEGORIES.map(cat => {
+                        const items = data[cat] || [];
+                        if (items.length === 0) return '';
+                        return `
+                            <div class="category-header">${cat}</div>
+                            <table>
+                                <tr><th>Contrato</th><th>Serial</th></tr>
+                                ${items.map((item: any) => `<tr><td>${item.contract || '-'}</td><td>${item.serial || '-'}</td></tr>`).join('')}
+                            </table>
+                            <br/>
+                        `;
+                    }).join('')}
+                    <br/><p>Gerado por EquipTrack Pro</p></body></html>
+                `;
+            } else {
+                mimeType = 'application/vnd.ms-excel';
+                extension = 'xls';
+                content = `
+                    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+                    <head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">${styles}</head><body>
+                    <table>
+                        <thead>
+                            <tr><th colspan="3" style="font-size:16px; background-color:#dbeafe;">Relatório - ${label}</th></tr>
+                            <tr><th>Categoria</th><th>Contrato</th><th>Serial</th></tr>
+                        </thead>
+                        <tbody>
+                        ${CATEGORIES.flatMap(cat => (data[cat]||[]).map((item: any) => 
+                            `<tr><td>${cat}</td><td>${item.contract || '-'}</td><td>${item.serial || '-'}</td></tr>`
+                        )).join('')}
+                        </tbody>
+                    </table></body></html>
+                `;
+            }
+
+            // Create blob with UTF-8 BOM
+            const blob = new Blob(['\ufeff', content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `Equipamentos_${label.replace(/[^a-z0-9]/gi, '_')}.${extension}`;
+            document.body.appendChild(link);
+            link.click();
+            setTimeout(() => {
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }, 100);
+        } catch (e) {
+            console.error(e);
+            alert("Erro ao exportar arquivo. Tente novamente.");
         }
-
-        const blob = new Blob(['\ufeff', content], { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `Equipamentos_${label.replace(/[^a-z0-9]/gi, '_')}.${extension}`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
     };
 
     return (
@@ -191,8 +216,11 @@ export const ShareModal = ({ appData, currentDate, onClose, isSharingApp }: any)
 
     const handleShare = (platform: 'whatsapp' | 'telegram' | 'email') => {
         let text = '';
+        let subject = '';
+
         if (isSharingApp) {
-            text = `Baixe o App EquipTrack aqui: ${window.location.href}`;
+            text = `Baixe o App EquipTrack Pro aqui: ${window.location.href}`;
+            subject = 'Convite para EquipTrack Pro';
         } else {
             const dateToUse = range === 'specific' && specificDate ? specificDate : currentDate;
             const { data, label } = getDataInRange(appData, dateToUse, range, specificDate || undefined);
@@ -202,23 +230,26 @@ export const ShareModal = ({ appData, currentDate, onClose, isSharingApp }: any)
                 if(items.length > 0) {
                     report += `*${cat}* (${items.length})\n`;
                     items.forEach((item: any) => {
-                        report += `- SN: ${item.serial} | CT: ${item.contract}\n`;
+                        report += `- SN: ${item.serial || 'N/A'} | CT: ${item.contract || 'N/A'}\n`;
                     });
                     report += '\n';
                 }
             });
             text = report;
+            subject = `Relatório Equipamentos - ${label}`;
         }
+        
         const encoded = encodeURIComponent(text);
         let url = '';
         if (platform === 'whatsapp') url = `https://wa.me/?text=${encoded}`;
         else if (platform === 'telegram') url = `https://t.me/share/url?url=${window.location.href}&text=${encoded}`;
-        else if (platform === 'email') url = `mailto:?subject=Relatório Equipamentos&body=${encoded}`;
+        else if (platform === 'email') url = `mailto:?subject=${encodeURIComponent(subject)}&body=${encoded}`;
+        
         window.open(url, '_blank');
     };
 
     return (
-        <Modal title={isSharingApp ? "Compartilhar App" : "Exportar"} onClose={onClose}>
+        <Modal title={isSharingApp ? "Compartilhar App" : "Exportar Relatório"} onClose={onClose}>
             {!isSharingApp && (
                  <div className="mb-6">
                     <div className="flex bg-slate-100 p-1 rounded-lg mb-2">
@@ -240,14 +271,17 @@ export const ShareModal = ({ appData, currentDate, onClose, isSharingApp }: any)
                             />
                         </div>
                     )}
-
-                    <p className="text-xs text-slate-500 mb-2 text-center">Compartilhar resumo:</p>
                  </div>
             )}
+            
+            <p className="text-xs text-slate-500 mb-4 text-center">
+                {isSharingApp ? "Enviar link do App via:" : "Enviar resumo via:"}
+            </p>
+
             <div className="grid grid-cols-3 gap-3">
-                <button onClick={() => handleShare('whatsapp')} className="flex flex-col items-center p-3 bg-green-50 rounded-xl border border-green-100 hover:bg-green-100"><IconWhatsapp className="w-8 h-8 text-green-500 mb-1"/><span className="text-xs font-bold text-green-700">WhatsApp</span></button>
-                <button onClick={() => handleShare('telegram')} className="flex flex-col items-center p-3 bg-sky-50 rounded-xl border border-sky-100 hover:bg-sky-100"><IconTelegram className="w-8 h-8 text-sky-500 mb-1"/><span className="text-xs font-bold text-sky-700">Telegram</span></button>
-                <button onClick={() => handleShare('email')} className="flex flex-col items-center p-3 bg-slate-50 rounded-xl border border-slate-100 hover:bg-slate-100"><IconEmail className="w-8 h-8 text-slate-500 mb-1"/><span className="text-xs font-bold text-slate-700">E-mail</span></button>
+                <button onClick={() => handleShare('whatsapp')} className="flex flex-col items-center p-3 bg-green-50 rounded-xl border border-green-100 hover:bg-green-100 active:scale-95 transition-transform"><IconWhatsapp className="w-8 h-8 text-green-500 mb-1"/><span className="text-xs font-bold text-green-700">WhatsApp</span></button>
+                <button onClick={() => handleShare('telegram')} className="flex flex-col items-center p-3 bg-sky-50 rounded-xl border border-sky-100 hover:bg-sky-100 active:scale-95 transition-transform"><IconTelegram className="w-8 h-8 text-sky-500 mb-1"/><span className="text-xs font-bold text-sky-700">Telegram</span></button>
+                <button onClick={() => handleShare('email')} className="flex flex-col items-center p-3 bg-slate-50 rounded-xl border border-slate-100 hover:bg-slate-100 active:scale-95 transition-transform"><IconEmail className="w-8 h-8 text-slate-500 mb-1"/><span className="text-xs font-bold text-slate-700">E-mail</span></button>
             </div>
         </Modal>
     );
@@ -259,7 +293,7 @@ export const AboutModal = ({ onClose, onShareClick }: any) => (
             <IconApp className="w-24 h-24 mx-auto drop-shadow-xl" />
             <div>
                 <h2 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-b from-blue-600 to-cyan-400">Controle de Equipamentos</h2>
-                <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-bold">V0.0.1c</span>
+                <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-bold">V1.0.0</span>
             </div>
             <div className="text-sm text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-100">
                 <p className="font-medium">Desenvolvido by Leo Luz</p>
@@ -360,104 +394,209 @@ export const PhotoGalleryModal = ({ item, onClose, onUpdatePhotos, setConfirmati
 export const CameraModal = ({ onClose, onCapture }: any) => {
     const [mode, setMode] = useState<'select' | 'photo' | 'qr'>('select');
     const [isCameraReady, setIsCameraReady] = useState(false);
+    const videoRef = useRef<HTMLVideoElement>(null);
     const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Initial Setup and Cleanup
+    useEffect(() => {
+        return () => {
+            stopStream();
+            if(scannerRef.current) {
+                scannerRef.current.clear().catch(e => console.error("Scanner clear error", e));
+            }
+        };
+    }, []);
+
+    const stopStream = () => {
+        if (videoRef.current && videoRef.current.srcObject) {
+            const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
+            tracks.forEach(track => track.stop());
+            videoRef.current.srcObject = null;
+        }
+    };
+
+    const startPhotoCamera = async () => {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert("Sua câmera não pode ser acessada. Verifique se está usando HTTPS ou localhost e se as permissões foram concedidas.");
+            return;
+        }
+
+        try {
+            // Try ideal HD resolution first
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
+                    audio: false 
+                });
+                if (videoRef.current) {
+                    videoRef.current.srcObject = stream;
+                    videoRef.current.onloadedmetadata = () => {
+                        videoRef.current?.play().catch(e => console.log("Play interrupted", e));
+                        setIsCameraReady(true);
+                    };
+                }
+            } catch (err) {
+                // Fallback to basic resolution
+                console.log("HD not supported, falling back");
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "environment" },
+                    audio: false 
+                });
+                if (videoRef.current) {
+                    videoRef.current.srcObject = stream;
+                    videoRef.current.onloadedmetadata = () => {
+                        videoRef.current?.play().catch(e => console.log("Play interrupted", e));
+                        setIsCameraReady(true);
+                    };
+                }
+            }
+        } catch (e) {
+            console.error("Error accessing camera", e);
+            alert("Erro crítico ao acessar a câmera. Verifique as permissões.");
+        }
+    };
+
+    const startQRScanner = () => {
+        try {
+            const scanner = new Html5QrcodeScanner(
+                "reader",
+                { 
+                    fps: 10, 
+                    qrbox: 250, 
+                    supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+                },
+                false
+            );
+            scannerRef.current = scanner;
+            scanner.render((decodedText) => {
+                 const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+                 audio.play().catch(() => {});
+                 if(window.confirm(`Código detectado: ${decodedText}\nUsar este código?`)) {
+                      onCapture(null, decodedText);
+                 }
+            }, (err) => { console.log(err); });
+            setIsCameraReady(true);
+        } catch(e) {
+            console.error("Scanner error", e);
+            alert("Erro ao iniciar scanner.");
+        }
+    };
 
     useEffect(() => {
-        if (mode === 'select') return;
-
-        // Initialize with High Resolution constraints for photo clarity
-        const scanner = new Html5QrcodeScanner(
-            "reader",
-            { 
-                fps: 10, 
-                qrbox: 250, 
-                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
-                videoConstraints: {
-                    facingMode: "environment",
-                    width: { ideal: 1920 }, // Request 1080p minimum
-                    height: { ideal: 1080 }
-                }
-            },
-            false
-        );
-        scannerRef.current = scanner;
-
-        scanner.render((decodedText) => {
-            if (mode === 'qr') {
-                const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-                audio.play().catch(() => {});
-                
-                if(confirm(`Código detectado: ${decodedText}\nUsar este código?`)) {
-                     onCapture(null, decodedText);
-                }
-            }
-        }, (err) => { console.log(err); });
-
-        setIsCameraReady(true);
-
-        return () => {
-            scanner.clear().catch(e => console.error(e));
-        };
-    }, [mode, onCapture]);
+        setIsCameraReady(false);
+        if (mode === 'photo') {
+            startPhotoCamera();
+        } else if (mode === 'qr') {
+            setTimeout(startQRScanner, 100);
+        }
+    }, [mode]);
 
     const takePhoto = () => {
-        const video = document.querySelector('#reader video') as HTMLVideoElement;
-        if (video) {
-            const canvas = document.createElement('canvas');
-            // Use the actual video dimensions to capture full resolution
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            
-            const ctx = canvas.getContext('2d');
-            if(ctx) {
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const base64 = canvas.toDataURL('image/jpeg', 0.9); // High quality JPEG
-                onCapture(base64, null);
+        if (videoRef.current && isCameraReady) {
+            try {
+                const canvas = document.createElement('canvas');
+                // Ensure dimensions exist
+                const width = videoRef.current.videoWidth || 640;
+                const height = videoRef.current.videoHeight || 480;
+                canvas.width = width;
+                canvas.height = height;
+                
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.drawImage(videoRef.current, 0, 0, width, height);
+                    const base64 = canvas.toDataURL('image/jpeg', 0.8);
+                    onCapture(base64, null);
+                }
+            } catch(e) {
+                console.error("Capture error", e);
+                alert("Erro ao capturar foto.");
             }
+        }
+    };
+    
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64 = reader.result as string;
+                onCapture(base64, null);
+            };
+            reader.readAsDataURL(file);
         }
     };
 
     return (
         <div className="fixed inset-0 z-[70] bg-black/95 backdrop-blur-xl flex flex-col">
              <div className="flex justify-between p-4 text-white z-10">
-                <h3 className="font-bold">{mode === 'select' ? 'Câmera' : mode === 'photo' ? 'Tirar Foto' : 'Ler QR / Barras'}</h3>
+                <h3 className="font-bold">{mode === 'select' ? 'Câmera' : mode === 'photo' ? 'Foto' : 'QR / Barras'}</h3>
                 <button onClick={onClose}><IconX className="w-6 h-6" /></button>
             </div>
 
-            <div className="flex-1 flex flex-col items-center justify-center p-4">
+            <div className="flex-1 flex flex-col items-center justify-center p-4 overflow-hidden relative">
                 {mode === 'select' && (
-                    <div className="flex gap-8 items-center justify-center w-full animate-slide-in-up">
-                        <button onClick={() => setMode('photo')} className="flex flex-col items-center gap-2 group">
-                            <div className="w-24 h-24 rounded-full bg-white/10 border border-white/20 flex items-center justify-center group-active:scale-95 transition-all shadow-2xl shadow-purple-500/20">
-                                <IconCamera className="w-10 h-10 text-white" />
+                    <div className="flex flex-col gap-8 items-center justify-center w-full animate-slide-in-up">
+                        <div className="flex gap-8 justify-center items-center">
+                            {/* Left Button: Camera (Round) */}
+                            <button onClick={() => setMode('photo')} className="flex flex-col items-center gap-3 group">
+                                <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center group-active:scale-90 transition-all shadow-xl shadow-blue-500/40 border-4 border-blue-400/50">
+                                    <IconCamera className="w-10 h-10 text-white" />
+                                </div>
+                                <span className="text-white font-bold text-sm">Foto</span>
+                            </button>
+                            
+                            {/* Right Button: QR (Round) */}
+                            <button onClick={() => setMode('qr')} className="flex flex-col items-center gap-3 group">
+                                <div className="w-20 h-20 rounded-full bg-purple-600 flex items-center justify-center group-active:scale-90 transition-all shadow-xl shadow-purple-500/40 border-4 border-purple-400/50">
+                                    <IconQrCode className="w-10 h-10 text-white" />
+                                </div>
+                                <span className="text-white font-bold text-sm">QR / Barras</span>
+                            </button>
+                        </div>
+
+                        {/* Gallery Upload Option */}
+                         <button onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center gap-2 group mt-8">
+                            <div className="w-14 h-14 rounded-full bg-white/10 border border-white/20 flex items-center justify-center group-active:scale-95 transition-all shadow-lg">
+                                <IconGallery className="w-6 h-6 text-green-300" />
                             </div>
-                            <span className="text-white font-bold">Foto</span>
-                        </button>
-                        
-                        <button onClick={() => setMode('qr')} className="flex flex-col items-center gap-2 group">
-                            <div className="w-24 h-24 rounded-full bg-white/10 border border-white/20 flex items-center justify-center group-active:scale-95 transition-all shadow-2xl shadow-blue-500/20">
-                                <IconQrCode className="w-10 h-10 text-white" />
-                            </div>
-                            <span className="text-white font-bold">QR / Barras</span>
+                            <span className="text-white/70 text-xs font-medium">Galeria</span>
+                            <input 
+                                type="file" 
+                                accept="image/*" 
+                                ref={fileInputRef} 
+                                className="hidden" 
+                                onChange={handleFileUpload} 
+                            />
                         </button>
                     </div>
                 )}
 
-                {mode !== 'select' && (
-                    <div className="w-full h-full flex flex-col">
-                         <div id="reader" className="w-full flex-1 overflow-hidden rounded-xl border border-white/20"></div>
-                         {!isCameraReady && <div className="text-white text-center mt-4">Iniciando câmera...</div>}
-                         
-                         {mode === 'photo' && isCameraReady && (
-                             <div className="p-6 flex justify-center">
+                {/* Photo Mode */}
+                {mode === 'photo' && (
+                    <div className="w-full h-full flex flex-col items-center">
+                        <video ref={videoRef} className="max-h-[70vh] w-auto rounded-xl border border-white/20" playsInline muted autoPlay></video>
+                        {!isCameraReady && <div className="text-white mt-4">Abrindo câmera...</div>}
+                        {isCameraReady && (
+                             <div className="absolute bottom-10">
                                 <button onClick={takePhoto} className="w-16 h-16 bg-white rounded-full border-4 border-gray-300 active:scale-90 flex items-center justify-center shadow-lg">
                                     <div className="w-12 h-12 bg-white rounded-full border-2 border-black" />
                                 </button>
                              </div>
-                         )}
-                         
-                         <button onClick={() => setMode('select')} className="mt-4 text-white underline">Voltar</button>
+                        )}
                     </div>
+                )}
+
+                {/* QR Mode */}
+                {mode === 'qr' && (
+                    <div className="w-full max-w-md h-full flex flex-col">
+                         <div id="reader" className="w-full overflow-hidden rounded-xl border border-white/20"></div>
+                         {!isCameraReady && <div className="text-white text-center mt-4">Iniciando scanner...</div>}
+                    </div>
+                )}
+                
+                {mode !== 'select' && (
+                    <button onClick={() => { stopStream(); setMode('select'); }} className="absolute bottom-4 left-4 text-white underline">Voltar</button>
                 )}
             </div>
         </div>

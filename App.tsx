@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useReducer, PropsWithChildren } from 'react';
+import React, { useState, useEffect, useReducer, PropsWithChildren, Component } from 'react';
 import { SideMenu } from './components/SideMenu';
 import { 
     IconApp, IconPlus, IconMinus, IconTrash, IconUndo, IconSearch
@@ -11,6 +11,7 @@ import {
     PhotoGalleryModal, CameraModal, CalendarModal, DownloadModal, ShareModal, 
     SettingsModal, AboutModal, ConfirmationModal, SearchModal 
 } from './components/Modals';
+import { saveAppDataToDB, loadAppDataFromDB } from './utils/db';
 
 // --- UTILITIES ---
 
@@ -96,8 +97,8 @@ interface ErrorBoundaryState { hasError: boolean; error: Error | null; }
 
 class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
-      super(props);
-      this.state = { hasError: false, error: null };
+    super(props);
+    this.state = { hasError: false, error: null };
   }
 
   static getDerivedStateFromError(error: Error) { return { hasError: true, error }; }
@@ -126,6 +127,7 @@ const AppContent = () => {
   const [cameraModalItem, setCameraModalItem] = useState<EquipmentItem | null>(null);
   const [isGlobalDeleteMode, setIsGlobalDeleteMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Record<string, string[]>>({});
+  const [isLoaded, setIsLoaded] = useState(false);
   
   const formattedDate = getFormattedDate(currentDate);
 
@@ -145,22 +147,40 @@ const AppContent = () => {
     return () => clearInterval(timer);
   }, [currentDate]);
 
+  // Load Data from IndexedDB
   useEffect(() => {
-    const savedData = localStorage.getItem('equipmentData');
-    if (savedData) dispatch({ type: 'SET_DATA', payload: JSON.parse(savedData) });
+    const loadData = async () => {
+        const dbData = await loadAppDataFromDB();
+        if (dbData) {
+            dispatch({ type: 'SET_DATA', payload: dbData });
+        } else {
+             // Fallback to localstorage for migration or first load
+             const localData = localStorage.getItem('equipmentData');
+             if (localData) {
+                 dispatch({ type: 'SET_DATA', payload: JSON.parse(localData) });
+             }
+        }
+        setIsLoaded(true);
+    };
+    loadData();
   }, []);
 
+  // Ensure day structure exists
   useEffect(() => {
-    if (!appData[formattedDate]) {
+    if (isLoaded && !appData[formattedDate]) {
       dispatch({ type: 'ENSURE_DAY_DATA', payload: { date: formattedDate, dayData: createEmptyDailyData() } });
     }
-  }, [appData, formattedDate]);
+  }, [appData, formattedDate, isLoaded]);
 
+  // Save Data to IndexedDB (Debounced)
   useEffect(() => {
-    if (!isRestoring && Object.keys(appData).length > 0) {
-        localStorage.setItem('equipmentData', JSON.stringify(appData));
+    if (isLoaded && !isRestoring && Object.keys(appData).length > 0) {
+        const timeoutId = setTimeout(() => {
+            saveAppDataToDB(appData);
+        }, 500); // 500ms debounce
+        return () => clearTimeout(timeoutId);
     }
-  }, [appData, isRestoring]);
+  }, [appData, isRestoring, isLoaded]);
 
   const currentDayData: DailyData = appData[formattedDate] || createEmptyDailyData();
 
@@ -201,6 +221,10 @@ const AppContent = () => {
         });
       }
   };
+
+  if (!isLoaded) {
+      return <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-400">Carregando dados...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 bg-gradient-to-br from-slate-50 via-white to-blue-50/30 font-sans pb-32 relative overflow-hidden">
