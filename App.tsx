@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useReducer } from 'react';
+import React, { useState, useEffect, useReducer, Component } from 'react';
 import { SideMenu } from './components/SideMenu';
 import { 
     IconApp, IconPlus, IconMinus, IconTrash, IconUndo, IconSearch, IconBell
@@ -96,11 +95,8 @@ const dataReducer = (state: AppData, action: Action): AppData => {
 interface ErrorBoundaryProps { children?: React.ReactNode; }
 interface ErrorBoundaryState { hasError: boolean; error: Error | null; }
 
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false, error: null };
 
   static getDerivedStateFromError(error: Error) { return { hasError: true, error }; }
   
@@ -292,6 +288,9 @@ const AppContent = () => {
       return <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-400">Carregando dados...</div>;
   }
 
+  // Helper to get first name
+  const displayTitle = userSettings.name ? userSettings.name.split(' ')[0] : 'Equipamentos';
+
   return (
     <div className={`min-h-screen font-sans pb-32 transition-colors duration-300 ${userSettings.darkMode ? 'bg-slate-900' : 'bg-slate-100'}`}>
       <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onMenuClick={(m) => { setActiveModal(m); setIsMenuOpen(false); }}/>
@@ -332,8 +331,8 @@ const AppContent = () => {
       <div className={`${userSettings.darkMode ? 'bg-slate-800' : 'bg-slate-50'} rounded-t-[40px] -mt-10 px-4 pt-8 pb-32 min-h-screen shadow-2xl relative z-10 transition-colors duration-300`}>
         
         {/* Dynamic Title */}
-        <h1 className="text-4xl font-bold text-center text-blue-500 mb-8 tracking-tight break-words">
-            {userSettings.name ? userSettings.name : 'Equipamentos'}
+        <h1 className="text-4xl font-bold text-center text-blue-500 mb-8 tracking-tight break-words capitalize">
+            {displayTitle}
         </h1>
 
         {/* Categories List */}
@@ -391,7 +390,7 @@ const AppContent = () => {
             onClose={() => setActiveModal(null)} 
             onClearData={() => setConfirmation({ 
                 message: "⚠️ ZONA DE PERIGO ⚠️", 
-                subMessage: "Esta ação NÃO pode ser desfeita! Todos os dados serão apagados permanentemente. Deseja realmente continuar?",
+                subMessage: "Esta ação NÃO pode ser desfeita!\n\nTodos os dados serão apagados permanentemente.\n\nDeseja realmente continuar?",
                 onConfirm: () => { dispatchWithHistory({ type: 'CLEAR_ALL_DATA' }); setActiveModal(null); },
                 isDanger: true
             })} 

@@ -388,28 +388,53 @@ interface AboutModalProps {
     onShareClick: () => void;
 }
 
-export const AboutModal: React.FC<AboutModalProps> = ({ onClose, onShareClick }) => (
-    <Modal title="Sobre" onClose={onClose}>
-        <div className="text-center space-y-4">
-            <IconApp className="w-24 h-24 mx-auto drop-shadow-xl" />
-            <div>
-                <h2 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-b from-blue-600 to-cyan-400">Controle de Equipamentos</h2>
-                <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-bold">V1.1.0</span>
+export const AboutModal: React.FC<AboutModalProps> = ({ onClose, onShareClick }) => {
+    const handleNativeShare = async () => {
+         if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'EquipTrack Pro',
+                    text: 'Baixe o Controle de Equipamentos aqui:',
+                    url: window.location.href
+                });
+            } catch (err) {
+                console.error("Error sharing", err);
+            }
+        } else {
+            // Fallback: Open same modal but focused on link sharing?
+            // For now, reuse onShareClick but maybe user wants direct link.
+            onShareClick();
+        }
+    };
+
+    return (
+        <Modal title="Sobre" onClose={onClose}>
+            <div className="text-center space-y-4">
+                <IconApp className="w-24 h-24 mx-auto drop-shadow-xl" />
+                <div>
+                    <h2 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-b from-blue-600 to-cyan-400">Controle de Equipamentos</h2>
+                    <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-bold">V1.1.0</span>
+                </div>
+                <div className="text-sm text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <p className="font-medium">Desenvolvido por Leo Luz</p>
+                </div>
+                
+                {/* Share Buttons */}
+                <div className="pt-4 border-t border-slate-100 space-y-3">
+                    <p className="text-xs text-slate-400 mb-2">Compartilhe o App</p>
+                    
+                    <button onClick={onShareClick} className="w-full py-3 bg-blue-500 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 hover:bg-blue-600 active:scale-95 flex items-center justify-center gap-2">
+                        <IconShare className="w-5 h-5" /> Compartilhar Progresso
+                    </button>
+
+                    <button onClick={handleNativeShare} className="w-full py-3 bg-purple-500 text-white font-bold rounded-xl shadow-lg shadow-purple-500/30 hover:bg-purple-600 active:scale-95 flex items-center justify-center gap-2">
+                        <IconApp className="w-5 h-5" /> Compartilhar Apenas App
+                    </button>
+                </div>
             </div>
-            <div className="text-sm text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <p className="font-medium">Desenvolvido por Leo Luz</p>
-            </div>
-            
-            {/* New Share App Button in About */}
-            <div className="pt-4 border-t border-slate-100">
-                <p className="text-xs text-slate-400 mb-2">Compartilhe o App e seu progresso</p>
-                <button onClick={onShareClick} className="w-full py-3 bg-blue-500 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 hover:bg-blue-600 active:scale-95 flex items-center justify-center gap-2">
-                    <IconShare className="w-5 h-5" /> Compartilhar App
-                </button>
-            </div>
-        </div>
-    </Modal>
-);
+        </Modal>
+    );
+};
 
 interface SettingsModalProps {
     onClose: () => void;
@@ -481,13 +506,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onClearDa
                 </div>
              </div>
 
-            <div className="mt-4">
-                <div className="flex items-center gap-2 mb-2 justify-center text-red-500">
+            <div className="mt-4 p-4 border-2 border-dashed border-red-200 rounded-xl bg-red-50/50">
+                <div className="flex items-center gap-2 mb-3 justify-center text-red-500">
                     <IconAlert className="w-5 h-5" />
                     <span className="font-black text-xs tracking-widest">ZONA DE PERIGO</span>
                     <IconAlert className="w-5 h-5" />
                 </div>
-                <button onClick={onClearData} className="w-full py-3 bg-red-50 border border-red-200 text-red-600 font-bold rounded-xl hover:bg-red-100 transition-colors shadow-sm">
+                <button onClick={onClearData} className="w-full py-3 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors shadow-md shadow-red-500/20">
                     Apagar Todos os Dados
                 </button>
             </div>
@@ -733,7 +758,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ message, s
              </div>
             <h3 className={`text-lg font-black mb-2 ${isDanger ? 'text-red-600' : 'text-slate-800'}`}>{message}</h3>
             {subMessage && (
-                <p className="text-slate-600 mb-6 text-sm font-medium leading-relaxed">{subMessage}</p>
+                <p className="text-slate-600 mb-6 text-sm font-medium leading-relaxed whitespace-pre-line">{subMessage}</p>
             )}
             {!subMessage && (
                 <p className="text-slate-500 mb-6 text-sm">Tem certeza?</p>

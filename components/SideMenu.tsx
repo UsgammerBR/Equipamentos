@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { IconX, IconSave, IconShare, IconFileWord, IconApp } from './icons';
+import { IconX, IconSave, IconShare, IconFileWord, IconApp, IconSettings } from './icons';
 
 interface SideMenuProps {
   isOpen: boolean;
@@ -27,17 +27,12 @@ export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onMenuClick
             <MenuButton icon={<IconFileWord />} label="Calendário" onClick={() => onMenuClick('calendar')} />
             <MenuButton icon={<IconSave />} label="Salvar Manualmente" onClick={() => onMenuClick('save')} />
             <MenuButton icon={<IconShare />} label="Exportar" onClick={() => onMenuClick('export')} />
+            <MenuButton icon={<IconSettings />} label="Configurações" onClick={() => onMenuClick('settings')} />
             
             <div className="h-px bg-gradient-to-r from-transparent via-blue-200/50 to-transparent my-6"></div>
             
             <MenuButton icon={<IconApp />} label="Sobre" onClick={() => onMenuClick('about')} />
           </nav>
-
-          <div className="pt-6 border-t border-blue-100/50">
-            <button onClick={() => onMenuClick('settings')} className="flex items-center gap-3 w-full p-3 text-red-400 hover:bg-red-50 hover:text-red-500 rounded-xl font-bold transition-colors">
-                <span className="text-sm">Configurações</span>
-            </button>
-          </div>
         </div>
       </div>
     </>
