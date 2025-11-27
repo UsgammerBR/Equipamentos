@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { IconX, IconSave, IconShare, IconFileWord, IconApp } from './icons';
 
@@ -26,7 +27,6 @@ export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onMenuClick
             <MenuButton icon={<IconFileWord />} label="Calendário" onClick={() => onMenuClick('calendar')} />
             <MenuButton icon={<IconSave />} label="Salvar Manualmente" onClick={() => onMenuClick('save')} />
             <MenuButton icon={<IconShare />} label="Exportar" onClick={() => onMenuClick('export')} />
-            <MenuButton icon={<IconShare className="rotate-180" />} label="Compartilhar App" onClick={() => onMenuClick('shareApp')} />
             
             <div className="h-px bg-gradient-to-r from-transparent via-blue-200/50 to-transparent my-6"></div>
             

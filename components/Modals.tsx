@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect, useRef, PropsWithChildren } from 'react';
 import { Html5QrcodeScanner, Html5QrcodeScanType } from "html5-qrcode";
 import { 
     IconX, IconChevronLeft, IconChevronRight, IconFileWord, 
-    IconFileExcel, IconWhatsapp, IconTelegram, IconEmail, IconShare, IconTrash, IconCamera, IconQrCode, IconGallery, IconApp
+    IconFileExcel, IconWhatsapp, IconTelegram, IconEmail, IconShare, IconTrash, IconCamera, IconQrCode, IconGallery, IconApp, IconLock, IconBell, IconSearch, IconAlert
 } from './icons';
-import { AppData, DailyData, EquipmentCategory, EquipmentItem } from '../types';
+import { AppData, DailyData, EquipmentCategory, EquipmentItem, UserSettings, NotificationItem } from '../types';
 import { CATEGORIES } from '../constants';
 
 // --- HELPER FUNCTIONS ---
@@ -66,12 +67,64 @@ interface ModalProps {
 
 export const Modal: React.FC<PropsWithChildren<ModalProps>> = ({ title, onClose, children }) => (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-md animate-fade-in">
-        <div className="bg-white/90 backdrop-blur-2xl rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-white/50 animate-slide-in-up">
-            <div className="flex justify-between items-center p-4 border-b border-slate-200/50">
+        <div className="bg-white/90 backdrop-blur-2xl rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-white/50 animate-slide-in-up max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b border-slate-200/50 flex-shrink-0">
                 <h3 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-b from-blue-600 to-cyan-400">{title}</h3>
                 <button onClick={onClose}><IconX className="w-6 h-6 text-slate-400 hover:text-red-500" /></button>
             </div>
-            <div className="p-4 max-h-[80vh] overflow-y-auto">{children}</div>
+            <div className="p-4 overflow-y-auto flex-1">{children}</div>
+        </div>
+    </div>
+);
+
+// --- SECURITY MODALS ---
+
+interface SecurityLockModalProps {
+    onClose: () => void;
+    onRequestUnlock: () => void;
+}
+
+export const SecurityLockModal: React.FC<SecurityLockModalProps> = ({ onClose, onRequestUnlock }) => (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+        <div className="bg-gradient-to-br from-red-500/20 to-red-900/40 backdrop-blur-xl border border-red-500/30 p-6 rounded-3xl shadow-2xl max-w-xs w-full text-center animate-scale-in">
+             <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-400/50 shadow-[0_0_20px_rgba(239,68,68,0.4)]">
+                <IconLock className="w-10 h-10 text-red-200" />
+             </div>
+             <h2 className="text-2xl font-black text-red-100 mb-2 drop-shadow-md">Proibido Alterações</h2>
+             <p className="text-red-200/80 text-sm mb-6 font-medium">Este dispositivo não tem permissão para editar. Para alterar, peça autorização ao desenvolvedor.</p>
+             
+             <button onClick={onRequestUnlock} className="w-full py-3 bg-red-600 text-white font-bold rounded-xl shadow-lg hover:bg-red-500 active:scale-95 transition-all mb-4 border border-red-400">
+                Solicitar Autorização
+             </button>
+             <button onClick={onClose} className="text-red-300 text-sm underline">Fechar</button>
+
+             <div className="mt-8 pt-4 border-t border-red-500/30">
+                <p className="text-[10px] text-red-300/60 uppercase tracking-widest font-bold">Propriedade de Leo Luz</p>
+             </div>
+        </div>
+    </div>
+);
+
+interface AuthorizationPopupProps {
+    deviceName: string;
+    onAllow: () => void;
+    onDeny: () => void;
+}
+
+export const AuthorizationPopup: React.FC<AuthorizationPopupProps> = ({ deviceName, onAllow, onDeny }) => (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-transparent">
+        <div className="bg-white/95 backdrop-blur-xl p-6 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.3)] max-w-xs w-full text-center border border-blue-200 animate-slide-in-up">
+            <h3 className="text-lg font-bold text-slate-800 mb-2">Solicitação de Acesso</h3>
+            <p className="text-sm text-slate-500 mb-4">
+                O dispositivo <b className="text-blue-600">{deviceName}</b> deseja permissão para editar.
+            </p>
+            <div className="flex gap-3">
+                <button onClick={onDeny} className="flex-1 py-2 bg-slate-100 text-slate-500 font-bold rounded-xl border border-slate-200">Negar</button>
+                <button onClick={onAllow} className="flex-1 py-2 bg-green-500 text-white font-bold rounded-xl shadow-lg shadow-green-500/30">Permitir</button>
+            </div>
+            <div className="mt-2 h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500 animate-[width_10s_linear_forwards]" style={{width: '100%'}}></div>
+            </div>
         </div>
     </div>
 );
@@ -239,13 +292,31 @@ export const ShareModal: React.FC<ShareModalProps> = ({ appData, currentDate, on
     const [range, setRange] = useState<'day' | 'month' | 'specific'>('day');
     const [specificDate, setSpecificDate] = useState<Date | null>(null);
 
+    // If sharing app from About menu, default to sharing stats from day 1 to today
+    useEffect(() => {
+        if (isSharingApp) {
+            setRange('month'); // Using month logic to simulate day 1 to today
+        }
+    }, [isSharingApp]);
+
     const handleShare = (platform: 'whatsapp' | 'telegram' | 'email') => {
         let text = '';
         let subject = '';
 
         if (isSharingApp) {
-            text = `Baixe o App EquipTrack Pro aqui: ${window.location.href}`;
-            subject = 'Convite para EquipTrack Pro';
+            // Sharing App + Month Stats
+            const { data, label } = getDataInRange(appData, currentDate, 'month');
+            let report = `*Relatório do App (01/${currentDate.getMonth()+1} até Hoje)*\n`;
+            report += `Confira meu uso do EquipTrack Pro!\n\n`;
+            
+             CATEGORIES.forEach(cat => {
+                const items = data[cat] || [];
+                if(items.length > 0) report += `*${cat}*: ${items.length} itens\n`;
+            });
+            report += `\nBaixe o App aqui: ${window.location.href}`;
+            
+            text = report;
+            subject = 'Meu uso do EquipTrack Pro';
         } else {
             const dateToUse = range === 'specific' && specificDate ? specificDate : currentDate;
             const { data, label } = getDataInRange(appData, dateToUse, range, specificDate || undefined);
@@ -300,7 +371,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ appData, currentDate, on
             )}
             
             <p className="text-xs text-slate-500 mb-4 text-center">
-                {isSharingApp ? "Enviar link do App via:" : "Enviar resumo via:"}
+                {isSharingApp ? "Enviar resumo e link via:" : "Enviar resumo via:"}
             </p>
 
             <div className="grid grid-cols-3 gap-3">
@@ -323,14 +394,19 @@ export const AboutModal: React.FC<AboutModalProps> = ({ onClose, onShareClick })
             <IconApp className="w-24 h-24 mx-auto drop-shadow-xl" />
             <div>
                 <h2 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-b from-blue-600 to-cyan-400">Controle de Equipamentos</h2>
-                <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-bold">V1.0.0</span>
+                <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-bold">V1.1.0</span>
             </div>
             <div className="text-sm text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <p className="font-medium">Desenvolvido by Leo Luz</p>
+                <p className="font-medium">Desenvolvido por Leo Luz</p>
             </div>
-            <button onClick={onShareClick} className="w-full py-3 bg-blue-500 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 hover:bg-blue-600 active:scale-95 flex items-center justify-center gap-2">
-                <IconShare className="w-5 h-5" /> Compartilhar App
-            </button>
+            
+            {/* New Share App Button in About */}
+            <div className="pt-4 border-t border-slate-100">
+                <p className="text-xs text-slate-400 mb-2">Compartilhe o App e seu progresso</p>
+                <button onClick={onShareClick} className="w-full py-3 bg-blue-500 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 hover:bg-blue-600 active:scale-95 flex items-center justify-center gap-2">
+                    <IconShare className="w-5 h-5" /> Compartilhar App
+                </button>
+            </div>
         </div>
     </Modal>
 );
@@ -338,372 +414,410 @@ export const AboutModal: React.FC<AboutModalProps> = ({ onClose, onShareClick })
 interface SettingsModalProps {
     onClose: () => void;
     onClearData: () => void;
+    userSettings: UserSettings;
+    onSaveSettings: (settings: UserSettings) => void;
+    // For simulation purpose
+    isLocked: boolean;
+    toggleLock: () => void;
 }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onClearData }) => (
+export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onClearData, userSettings, onSaveSettings, isLocked, toggleLock }) => {
+    const [name, setName] = useState(userSettings.name);
+    const [cpf, setCpf] = useState(userSettings.cpf);
+    const [autoSave, setAutoSave] = useState(userSettings.autoSave ?? true);
+    const [darkMode, setDarkMode] = useState(userSettings.darkMode ?? false);
+    const [notifications, setNotifications] = useState(userSettings.notifications ?? true);
+
+    const handleSave = () => {
+        onSaveSettings({ 
+            name, 
+            cpf,
+            autoSave,
+            darkMode,
+            notifications
+        });
+        onClose();
+    };
+
+    return (
     <Modal title="Configurações" onClose={onClose}>
-        <div className="space-y-4">
-            <div className="p-4 bg-red-50 rounded-xl border border-red-100">
-                <h4 className="font-bold text-red-600 mb-1">Zona de Perigo</h4>
-                <p className="text-xs text-red-400 mb-3">Esta ação não pode ser desfeita.</p>
-                <button onClick={onClearData} className="w-full py-2 bg-white border border-red-200 text-red-500 font-bold rounded-lg hover:bg-red-50">
+        <div className="space-y-6">
+            <div className="space-y-3">
+                <h4 className="font-bold text-slate-700 text-sm">Usuario</h4>
+                <div>
+                    <input 
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        placeholder="Nome" 
+                        className="w-full p-3 bg-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-300 placeholder:text-slate-400"
+                    />
+                </div>
+                <div>
+                    <input 
+                        value={cpf}
+                        onChange={e => setCpf(e.target.value)}
+                        placeholder="CPF (Opcional)" 
+                        className="w-full p-3 bg-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-300 placeholder:text-slate-400"
+                    />
+                </div>
+                <button onClick={handleSave} className="w-full py-2 bg-blue-500 text-white font-bold rounded-lg shadow-md hover:bg-blue-600 transition-colors">
+                    Salvar Dados Usuário
+                </button>
+            </div>
+
+            <div className="space-y-2 py-2 border-t border-slate-100">
+                <ToggleSwitch label="Salvamento Automático" checked={autoSave} onChange={setAutoSave} />
+                <ToggleSwitch label="Modo Escuro" checked={darkMode} onChange={setDarkMode} />
+                <ToggleSwitch label="Notificações" checked={notifications} onChange={setNotifications} />
+            </div>
+
+             {/* Hidden Feature for Simulation */}
+             <div className="pt-2 border-t border-slate-100">
+                <div className="flex justify-between items-center">
+                    <span className="text-xs text-slate-400">Modo Bloqueio (Simulação)</span>
+                    <button onClick={toggleLock} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${isLocked ? 'bg-red-500 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                        {isLocked ? 'ATIVADO' : 'DESATIVADO'}
+                    </button>
+                </div>
+             </div>
+
+            <div className="mt-4">
+                <div className="flex items-center gap-2 mb-2 justify-center text-red-500">
+                    <IconAlert className="w-5 h-5" />
+                    <span className="font-black text-xs tracking-widest">ZONA DE PERIGO</span>
+                    <IconAlert className="w-5 h-5" />
+                </div>
+                <button onClick={onClearData} className="w-full py-3 bg-red-50 border border-red-200 text-red-600 font-bold rounded-xl hover:bg-red-100 transition-colors shadow-sm">
                     Apagar Todos os Dados
                 </button>
             </div>
         </div>
     </Modal>
+)};
+
+const ToggleSwitch = ({ label, checked, onChange }: { label: string, checked: boolean, onChange: (v: boolean) => void }) => (
+    <div className="flex items-center justify-between p-2">
+        <span className="text-sm font-bold text-slate-600">{label}</span>
+        <button 
+            onClick={() => onChange(!checked)}
+            className={`w-12 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out ${checked ? 'bg-blue-500' : 'bg-slate-200'}`}
+        >
+            <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${checked ? 'translate-x-6' : 'translate-x-0'}`} />
+        </button>
+    </div>
 );
 
-interface ConfirmationModalProps {
-    message: string;
-    onConfirm: () => void;
-    onCancel: () => void;
+interface NotificationsModalProps {
+    onClose: () => void;
+    notifications: NotificationItem[];
 }
 
-export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ message, onConfirm, onCancel }) => (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
-        <div className="bg-white/90 backdrop-blur-xl p-6 rounded-2xl shadow-2xl max-w-xs w-full text-center border border-white/50 animate-slide-in-up">
-            <IconTrash className="w-12 h-12 text-red-500 mx-auto mb-3 bg-red-50 p-2 rounded-full" />
-            <h3 className="text-lg font-bold text-slate-800 mb-6">{message}</h3>
-            <div className="flex gap-3">
-                <button onClick={onCancel} className="flex-1 py-2 bg-slate-100 text-slate-600 font-bold rounded-xl">Cancelar</button>
-                <button onClick={onConfirm} className="flex-1 py-2 bg-red-500 text-white font-bold rounded-xl shadow-lg shadow-red-500/30">Confirmar</button>
+export const NotificationsModal: React.FC<NotificationsModalProps> = ({ onClose, notifications }) => (
+    <Modal title="Notificações" onClose={onClose}>
+        {notifications.length === 0 ? (
+            <div className="text-center py-10 text-slate-400">
+                <IconBell className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>Nenhuma notificação.</p>
             </div>
-        </div>
-    </div>
+        ) : (
+            <div className="space-y-3">
+                {notifications.map(notif => (
+                    <div key={notif.id} className="p-3 bg-white border border-slate-100 rounded-xl shadow-sm flex gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${notif.type === 'request' ? 'bg-orange-100 text-orange-500' : 'bg-blue-100 text-blue-500'}`}>
+                            {notif.type === 'request' ? <IconLock className="w-5 h-5"/> : <IconBell className="w-5 h-5"/>}
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-slate-700 text-sm">{notif.title}</h4>
+                            <p className="text-xs text-slate-500">{notif.message}</p>
+                            <span className="text-[10px] text-slate-300 mt-1 block">{notif.timestamp.toLocaleTimeString()}</span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        )}
+    </Modal>
 );
 
 interface PhotoGalleryModalProps {
     item: EquipmentItem;
     onClose: () => void;
     onUpdatePhotos: (photos: string[]) => void;
-    setConfirmation: (val: any) => void;
+    setConfirmation: (conf: { message: string; onConfirm: () => void } | null) => void;
 }
 
 export const PhotoGalleryModal: React.FC<PhotoGalleryModalProps> = ({ item, onClose, onUpdatePhotos, setConfirmation }) => {
-    const [viewPhoto, setViewPhoto] = useState<string | null>(null);
-    
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
     const handleDelete = (index: number) => {
         setConfirmation({
-            message: 'Apagar esta foto?',
+            message: "Excluir esta foto?",
             onConfirm: () => {
-                const newPhotos = item.photos.filter((_: any, i: number) => i !== index);
+                const newPhotos = [...item.photos];
+                newPhotos.splice(index, 1);
                 onUpdatePhotos(newPhotos);
-                if (viewPhoto === item.photos[index]) setViewPhoto(null);
             }
         });
     };
 
-    const handleSharePhoto = async (base64: string) => {
-        try {
-            const res = await fetch(base64);
-            const blob = await res.blob();
-            const file = new File([blob], "equipamento.jpg", { type: "image/jpeg" });
-            if (navigator.share) {
-                await navigator.share({ files: [file] });
-            } else {
-                alert("Compartilhamento não suportado neste navegador.");
-            }
-        } catch (e) { console.error(e); }
+    const handleAddPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                if(ev.target?.result) onUpdatePhotos([...item.photos, ev.target.result as string]);
+            };
+            reader.readAsDataURL(e.target.files[0]);
+        }
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/90 flex flex-col animate-fade-in">
-            <div className="flex justify-between items-center p-4 text-white">
-                <h3 className="font-bold">Galeria ({item.photos.length})</h3>
-                <button onClick={onClose}><IconX className="w-8 h-8" /></button>
-            </div>
-            
-            <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
-                {viewPhoto ? (
-                    <div className="relative w-full h-full flex flex-col items-center justify-center">
-                         <img src={viewPhoto} className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl" alt="Detail" />
-                         <div className="flex gap-4 mt-4">
-                            <button onClick={() => handleSharePhoto(viewPhoto)} className="p-3 bg-blue-600 rounded-full text-white"><IconShare className="w-6 h-6"/></button>
-                            <button onClick={() => handleDelete(item.photos.indexOf(viewPhoto))} className="p-3 bg-red-600 rounded-full text-white"><IconTrash className="w-6 h-6"/></button>
-                         </div>
-                         <button onClick={() => setViewPhoto(null)} className="mt-4 text-white underline">Voltar</button>
+        <Modal title="Galeria de Fotos" onClose={onClose}>
+            <div className="grid grid-cols-2 gap-2 mb-4">
+                {item.photos.map((photo, idx) => (
+                    <div key={idx} className="relative group aspect-square bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
+                        <img src={photo} alt={`Foto ${idx}`} className="w-full h-full object-cover" />
+                        <button 
+                            onClick={() => handleDelete(idx)}
+                            className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                        >
+                            <IconTrash className="w-4 h-4" />
+                        </button>
                     </div>
-                ) : (
-                    <div className="grid grid-cols-3 gap-2 w-full max-w-lg overflow-y-auto max-h-full content-start">
-                        {item.photos.map((p: string, i: number) => (
-                            <button key={i} onClick={() => setViewPhoto(p)} className="aspect-square relative group overflow-hidden rounded-lg border border-white/20">
-                                <img src={p} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt={`Thumb ${i}`} />
-                            </button>
-                        ))}
-                         {item.photos.length === 0 && <p className="col-span-3 text-center text-slate-500 mt-10">Nenhuma foto.</p>}
-                    </div>
-                )}
+                ))}
+                <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="aspect-square bg-slate-50 rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 hover:bg-slate-100 hover:border-blue-400 hover:text-blue-500 transition-colors"
+                >
+                    <IconCamera className="w-8 h-8 mb-1" />
+                    <span className="text-xs font-bold">Adicionar</span>
+                </button>
             </div>
-        </div>
+            <input 
+                type="file" 
+                ref={fileInputRef} 
+                className="hidden" 
+                accept="image/*" 
+                capture="environment"
+                onChange={handleAddPhoto}
+            />
+            <div className="text-center text-xs text-slate-400">
+                Total: {item.photos.length} fotos
+            </div>
+        </Modal>
     );
 };
 
 interface CameraModalProps {
     onClose: () => void;
-    onCapture: (photo: string | null, code: string | null) => void;
+    onCapture: (photo: string, code: string) => void;
 }
 
 export const CameraModal: React.FC<CameraModalProps> = ({ onClose, onCapture }) => {
-    const [mode, setMode] = useState<'select' | 'photo' | 'qr'>('select');
-    const [isCameraReady, setIsCameraReady] = useState(false);
+    const [mode, setMode] = useState<'camera'|'scanner'>('camera');
     const videoRef = useRef<HTMLVideoElement>(null);
-    const scannerRef = useRef<Html5QrcodeScanner | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [stream, setStream] = useState<MediaStream | null>(null);
 
-    // Initial Setup and Cleanup
     useEffect(() => {
-        return () => {
-            stopStream();
-            if(scannerRef.current) {
-                scannerRef.current.clear().catch(e => console.error("Scanner clear error", e));
-            }
-        };
-    }, []);
-
-    const stopStream = () => {
-        if (videoRef.current && videoRef.current.srcObject) {
-            const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-            tracks.forEach(track => track.stop());
-            videoRef.current.srcObject = null;
+        if (mode === 'camera') {
+            startCamera();
+        } else {
+            stopCamera();
         }
-    };
+        return () => stopCamera();
+    }, [mode]);
 
-    const startPhotoCamera = async () => {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            alert("Sua câmera não pode ser acessada. Verifique se está usando HTTPS ou localhost e se as permissões foram concedidas.");
-            return;
-        }
-
+    const startCamera = async () => {
         try {
-            // Try ideal HD resolution first
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
-                    audio: false 
-                });
-                if (videoRef.current) {
-                    videoRef.current.srcObject = stream;
-                    videoRef.current.onloadedmetadata = () => {
-                        videoRef.current?.play().catch(e => console.log("Play interrupted", e));
-                        setIsCameraReady(true);
-                    };
-                }
-            } catch (err) {
-                // Fallback to basic resolution
-                console.log("HD not supported, falling back");
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "environment" },
-                    audio: false 
-                });
-                if (videoRef.current) {
-                    videoRef.current.srcObject = stream;
-                    videoRef.current.onloadedmetadata = () => {
-                        videoRef.current?.play().catch(e => console.log("Play interrupted", e));
-                        setIsCameraReady(true);
-                    };
-                }
-            }
+            const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            setStream(s);
+            if (videoRef.current) videoRef.current.srcObject = s;
         } catch (e) {
-            console.error("Error accessing camera", e);
-            alert("Erro crítico ao acessar a câmera. Verifique as permissões.");
+            console.error("Camera error", e);
+            alert("Erro ao acessar câmera.");
         }
     };
 
-    const startQRScanner = () => {
-        try {
+    const stopCamera = () => {
+        if (stream) {
+            stream.getTracks().forEach(t => t.stop());
+            setStream(null);
+        }
+    };
+
+    const takePhoto = () => {
+        if (videoRef.current) {
+            const canvas = document.createElement('canvas');
+            canvas.width = videoRef.current.videoWidth;
+            canvas.height = videoRef.current.videoHeight;
+            canvas.getContext('2d')?.drawImage(videoRef.current, 0, 0);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            onCapture(dataUrl, '');
+        }
+    };
+
+    // Scanner implementation using Html5QrcodeScanner
+    useEffect(() => {
+        if (mode === 'scanner') {
             const scanner = new Html5QrcodeScanner(
                 "reader",
-                { 
-                    fps: 10, 
-                    qrbox: 250, 
-                    supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
-                },
+                { fps: 10, qrbox: { width: 250, height: 250 }, supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA] },
                 false
             );
-            scannerRef.current = scanner;
             scanner.render((decodedText) => {
-                 const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-                 audio.play().catch(() => {});
-                 if(window.confirm(`Código detectado: ${decodedText}\nUsar este código?`)) {
-                      onCapture(null, decodedText);
-                 }
-            }, (err) => { console.log(err); });
-            setIsCameraReady(true);
-        } catch(e) {
-            console.error("Scanner error", e);
-            alert("Erro ao iniciar scanner.");
-        }
-    };
-
-    useEffect(() => {
-        setIsCameraReady(false);
-        if (mode === 'photo') {
-            startPhotoCamera();
-        } else if (mode === 'qr') {
-            setTimeout(startQRScanner, 100);
+                onCapture('', decodedText);
+                scanner.clear();
+            }, (error) => {
+                // console.warn(error);
+            });
+            return () => {
+                try { scanner.clear(); } catch(e) {}
+            };
         }
     }, [mode]);
 
-    const takePhoto = () => {
-        if (videoRef.current && isCameraReady) {
-            try {
-                const canvas = document.createElement('canvas');
-                // Ensure dimensions exist
-                const width = videoRef.current.videoWidth || 640;
-                const height = videoRef.current.videoHeight || 480;
-                canvas.width = width;
-                canvas.height = height;
-                
-                const ctx = canvas.getContext('2d');
-                if (ctx) {
-                    ctx.drawImage(videoRef.current, 0, 0, width, height);
-                    const base64 = canvas.toDataURL('image/jpeg', 0.8);
-                    onCapture(base64, null);
-                }
-            } catch(e) {
-                console.error("Capture error", e);
-                alert("Erro ao capturar foto.");
-            }
-        }
-    };
-    
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const base64 = reader.result as string;
-                onCapture(base64, null);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
     return (
-        <div className="fixed inset-0 z-[70] bg-black/95 backdrop-blur-xl flex flex-col">
-             <div className="flex justify-between p-4 text-white z-10">
-                <h3 className="font-bold">{mode === 'select' ? 'Câmera' : mode === 'photo' ? 'Foto' : 'QR / Barras'}</h3>
-                <button onClick={onClose}><IconX className="w-6 h-6" /></button>
+        <Modal title="Câmera" onClose={onClose}>
+             <div className="flex justify-center gap-6 mb-4">
+                 <button 
+                    onClick={() => setMode('camera')} 
+                    className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-all ${mode === 'camera' ? 'bg-blue-100 text-blue-600 shadow-inner' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
+                >
+                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-200">
+                        <IconCamera className="w-6 h-6" />
+                    </div>
+                    <span className="text-xs font-bold">Foto</span>
+                </button>
+
+                 <button 
+                    onClick={() => setMode('scanner')} 
+                    className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-all ${mode === 'scanner' ? 'bg-blue-100 text-blue-600 shadow-inner' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
+                >
+                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-200">
+                        <IconQrCode className="w-6 h-6" />
+                    </div>
+                    <span className="text-xs font-bold">QR / Barras</span>
+                </button>
             </div>
-
-            <div className="flex-1 flex flex-col items-center justify-center p-4 overflow-hidden relative">
-                {mode === 'select' && (
-                    <div className="flex flex-col gap-8 items-center justify-center w-full animate-slide-in-up">
-                        <div className="flex gap-8 justify-center items-center">
-                            {/* Left Button: Camera (Round) */}
-                            <button onClick={() => setMode('photo')} className="flex flex-col items-center gap-3 group">
-                                <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center group-active:scale-90 transition-all shadow-xl shadow-blue-500/40 border-4 border-blue-400/50">
-                                    <IconCamera className="w-10 h-10 text-white" />
-                                </div>
-                                <span className="text-white font-bold text-sm">Foto</span>
-                            </button>
-                            
-                            {/* Right Button: QR (Round) */}
-                            <button onClick={() => setMode('qr')} className="flex flex-col items-center gap-3 group">
-                                <div className="w-20 h-20 rounded-full bg-purple-600 flex items-center justify-center group-active:scale-90 transition-all shadow-xl shadow-purple-500/40 border-4 border-purple-400/50">
-                                    <IconQrCode className="w-10 h-10 text-white" />
-                                </div>
-                                <span className="text-white font-bold text-sm">QR / Barras</span>
-                            </button>
-                        </div>
-
-                        {/* Gallery Upload Option */}
-                         <button onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center gap-2 group mt-8">
-                            <div className="w-14 h-14 rounded-full bg-white/10 border border-white/20 flex items-center justify-center group-active:scale-95 transition-all shadow-lg">
-                                <IconGallery className="w-6 h-6 text-green-300" />
-                            </div>
-                            <span className="text-white/70 text-xs font-medium">Galeria</span>
-                            <input 
-                                type="file" 
-                                accept="image/*" 
-                                ref={fileInputRef} 
-                                className="hidden" 
-                                onChange={handleFileUpload} 
-                            />
+            
+            <div className="bg-black rounded-xl overflow-hidden aspect-[3/4] relative flex items-center justify-center border-4 border-slate-100 shadow-2xl">
+                {mode === 'camera' ? (
+                    <>
+                        <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                        <button 
+                            onClick={takePhoto}
+                            className="absolute bottom-6 left-1/2 -translate-x-1/2 w-16 h-16 bg-white rounded-full border-4 border-slate-200 shadow-lg active:scale-95 transition-transform flex items-center justify-center"
+                        >
+                            <div className="w-12 h-12 rounded-full border border-slate-300"></div>
                         </button>
-                    </div>
-                )}
-
-                {/* Photo Mode */}
-                {mode === 'photo' && (
-                    <div className="w-full h-full flex flex-col items-center">
-                        <video ref={videoRef} className="max-h-[70vh] w-auto rounded-xl border border-white/20" playsInline muted autoPlay></video>
-                        {!isCameraReady && <div className="text-white mt-4">Abrindo câmera...</div>}
-                        {isCameraReady && (
-                             <div className="absolute bottom-10">
-                                <button onClick={takePhoto} className="w-16 h-16 bg-white rounded-full border-4 border-gray-300 active:scale-90 flex items-center justify-center shadow-lg">
-                                    <div className="w-12 h-12 bg-white rounded-full border-2 border-black" />
-                                </button>
-                             </div>
-                        )}
-                    </div>
-                )}
-
-                {/* QR Mode */}
-                {mode === 'qr' && (
-                    <div className="w-full max-w-md h-full flex flex-col">
-                         <div id="reader" className="w-full overflow-hidden rounded-xl border border-white/20"></div>
-                         {!isCameraReady && <div className="text-white text-center mt-4">Iniciando scanner...</div>}
-                    </div>
-                )}
-                
-                {mode !== 'select' && (
-                    <button onClick={() => { stopStream(); setMode('select'); }} className="absolute bottom-4 left-4 text-white underline">Voltar</button>
+                    </>
+                ) : (
+                    <div id="reader" className="w-full h-full bg-white"></div>
                 )}
             </div>
-        </div>
+        </Modal>
     );
 };
+
+interface ConfirmationModalProps {
+    message: string;
+    subMessage?: string;
+    onConfirm: () => void;
+    onCancel: () => void;
+    isDanger?: boolean;
+}
+
+export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ message, subMessage, onConfirm, onCancel, isDanger }) => (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+        <div className={`bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-scale-in text-center ${isDanger ? 'border-2 border-red-500' : ''}`}>
+             <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${isDanger ? 'bg-red-100' : 'bg-slate-100'}`}>
+                {isDanger ? <IconAlert className="w-8 h-8 text-red-500" /> : <IconTrash className="w-8 h-8 text-slate-500" />}
+             </div>
+            <h3 className={`text-lg font-black mb-2 ${isDanger ? 'text-red-600' : 'text-slate-800'}`}>{message}</h3>
+            {subMessage && (
+                <p className="text-slate-600 mb-6 text-sm font-medium leading-relaxed">{subMessage}</p>
+            )}
+            {!subMessage && (
+                <p className="text-slate-500 mb-6 text-sm">Tem certeza?</p>
+            )}
+            <div className="flex gap-3">
+                <button onClick={onCancel} className="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors">Cancelar</button>
+                <button onClick={onConfirm} className={`flex-1 py-3 font-bold rounded-xl shadow-lg transition-colors ${isDanger ? 'bg-red-600 text-white hover:bg-red-700 shadow-red-500/30' : 'bg-blue-500 text-white hover:bg-blue-600 shadow-blue-500/30'}`}>Confirmar</button>
+            </div>
+        </div>
+    </div>
+);
 
 interface SearchModalProps {
     onClose: () => void;
     appData: AppData;
-    onSelect: (item: any) => void;
+    onSelect: (result: { date: string, item: EquipmentItem }) => void;
 }
 
 export const SearchModal: React.FC<SearchModalProps> = ({ onClose, appData, onSelect }) => {
-    const [term, setTerm] = useState('');
-    const [results, setResults] = useState<any[]>([]);
+    const [query, setQuery] = useState('');
+    const [results, setResults] = useState<{date: string, item: EquipmentItem, category: string}[]>([]);
 
     useEffect(() => {
-        if (term.length < 2) { setResults([]); return; }
-        const res: any[] = [];
-        Object.entries(appData).forEach(([date, dailyData]: [string, any]) => {
+        if (query.trim().length < 2) {
+            setResults([]);
+            return;
+        }
+        const lowerQ = query.toLowerCase();
+        const res: {date: string, item: EquipmentItem, category: string}[] = [];
+        
+        Object.entries(appData).forEach(([date, dayData]) => {
             CATEGORIES.forEach(cat => {
-                (dailyData[cat]||[]).forEach((item: any) => {
-                    if ((item.serial?.includes(term) || item.contract?.includes(term)) && isItemActive(item)) {
-                        res.push({ date, category: cat, item });
+                dayData[cat]?.forEach(item => {
+                    if (
+                        (item.contract && item.contract.toLowerCase().includes(lowerQ)) ||
+                        (item.serial && item.serial.toLowerCase().includes(lowerQ))
+                    ) {
+                        res.push({ date, item, category: cat });
                     }
-                })
-            })
+                });
+            });
         });
-        setResults(res.sort((a,b) => b.date.localeCompare(a.date)));
-    }, [term, appData]);
+        setResults(res.slice(0, 50)); // Limit results
+    }, [query, appData]);
 
     return (
-        <Modal title="Buscar Item" onClose={onClose}>
-            <input 
-                autoFocus
-                value={term}
-                onChange={e => setTerm(e.target.value)}
-                placeholder="Digite Serial ou Contrato..."
-                className="w-full p-3 bg-slate-100 rounded-xl border border-slate-200 outline-none focus:ring-2 ring-cyan-400 font-bold text-slate-700 mb-4"
-            />
-            <div className="space-y-2">
+        <Modal title="Buscar Equipamento" onClose={onClose}>
+            <div className="mb-4 relative">
+                <IconSearch className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
+                <input 
+                    autoFocus
+                    placeholder="Buscar por Contrato ou Serial..." 
+                    className="w-full pl-10 pr-4 py-3 bg-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-300"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                />
+            </div>
+            
+            <div className="max-h-[60vh] overflow-y-auto space-y-2">
+                {results.length === 0 && query.length > 1 && (
+                    <p className="text-center text-slate-400 py-4">Nenhum resultado encontrado.</p>
+                )}
                 {results.map((res, i) => (
-                    <div key={i} onClick={() => onSelect(res)} className="p-3 bg-white border border-slate-100 rounded-xl shadow-sm hover:bg-blue-50 cursor-pointer">
-                        <div className="flex justify-between text-xs font-bold text-slate-400 mb-1">
-                            <span>{res.date}</span>
-                            <span className="uppercase text-cyan-600">{res.category}</span>
+                    <button 
+                        key={i} 
+                        onClick={() => onSelect({ date: res.date, item: res.item })}
+                        className="w-full text-left p-3 bg-white border border-slate-100 rounded-xl hover:bg-blue-50 transition-colors group"
+                    >
+                        <div className="flex justify-between items-center mb-1">
+                            <span className="text-[10px] font-bold uppercase text-blue-500 bg-blue-100 px-2 py-0.5 rounded">{res.category}</span>
+                            <span className="text-xs text-slate-400 font-medium">{res.date.split('-').reverse().join('/')}</span>
                         </div>
-                        <div className="font-mono text-sm text-slate-700">
-                            {res.item.serial && <div>SN: <span className="font-bold">{res.item.serial}</span></div>}
-                            {res.item.contract && <div>CT: <span className="font-bold">{res.item.contract}</span></div>}
+                        <div className="flex gap-4">
+                            <div>
+                                <span className="text-xs text-slate-400 block">Contrato</span>
+                                <span className="font-bold text-slate-700">{res.item.contract || '-'}</span>
+                            </div>
+                            <div>
+                                <span className="text-xs text-slate-400 block">Serial</span>
+                                <span className="font-bold text-slate-700">{res.item.serial || '-'}</span>
+                            </div>
                         </div>
-                    </div>
+                    </button>
                 ))}
-                {term.length > 1 && results.length === 0 && <p className="text-center text-slate-400 mt-4">Nenhum resultado.</p>}
             </div>
         </Modal>
     );

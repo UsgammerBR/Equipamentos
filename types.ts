@@ -1,3 +1,4 @@
+
 export type EquipmentCategory = 
   | 'BOX' 
   | 'BOX SOUND' 
@@ -20,3 +21,19 @@ export type DailyData = {
 export type AppData = {
   [date: string]: DailyData;
 };
+
+export interface NotificationItem {
+  id: string;
+  title: string;
+  message: string;
+  timestamp: Date;
+  type: 'request' | 'info';
+}
+
+export interface UserSettings {
+  name: string;
+  cpf: string;
+  autoSave: boolean;
+  darkMode: boolean;
+  notifications: boolean;
+}
