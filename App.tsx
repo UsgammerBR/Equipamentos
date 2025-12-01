@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useReducer, Component } from 'react';
+import React, { useState, useEffect, useReducer } from 'react';
 import { SideMenu } from './components/SideMenu';
 import { 
     IconApp, IconPlus, IconMinus, IconTrash, IconUndo, IconSearch, IconBell
@@ -95,7 +95,7 @@ const dataReducer = (state: AppData, action: Action): AppData => {
 interface ErrorBoundaryProps { children?: React.ReactNode; }
 interface ErrorBoundaryState { hasError: boolean; error: Error | null; }
 
-class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   state: ErrorBoundaryState = { hasError: false, error: null };
 
   static getDerivedStateFromError(error: Error) { return { hasError: true, error }; }

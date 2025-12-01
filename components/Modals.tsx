@@ -213,7 +213,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ appData, currentDa
                             <div class="category-header">${cat}</div>
                             <table>
                                 <tr><th>Contrato</th><th>Serial</th></tr>
-                                ${items.map((item: any) => `<tr><td>${item.contract || '-'}</td><td>${item.serial || '-'}</td></tr>`).join('')}
+                                ${items.map((item: EquipmentItem) => `<tr><td>${item.contract || '-'}</td><td>${item.serial || '-'}</td></tr>`).join('')}
                             </table>
                             <br/>
                         `;
@@ -232,7 +232,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ appData, currentDa
                             <tr><th>Categoria</th><th>Contrato</th><th>Serial</th></tr>
                         </thead>
                         <tbody>
-                        ${CATEGORIES.flatMap(cat => (data[cat]||[]).map((item: any) => 
+                        ${CATEGORIES.flatMap(cat => (data[cat]||[]).map((item: EquipmentItem) => 
                             `<tr><td>${cat}</td><td>${item.contract || '-'}</td><td>${item.serial || '-'}</td></tr>`
                         )).join('')}
                         </tbody>
@@ -325,7 +325,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ appData, currentDate, on
                 const items = data[cat] || [];
                 if(items.length > 0) {
                     report += `*${cat}* (${items.length})\n`;
-                    items.forEach((item: any) => {
+                    items.forEach((item: EquipmentItem) => {
                         report += `- SN: ${item.serial || 'N/A'} | CT: ${item.contract || 'N/A'}\n`;
                     });
                     report += '\n';
